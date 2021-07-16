@@ -5,7 +5,8 @@ from torch.distributions import Categorical
 
 
 class Reinforce(nn.Module):
-    def __init__(self, inp_dim=None, hid_dim=None, out_dim=None, init_cuda=False):
+    def __init__(self, inp_dim=None, hid_dim=None, out_dim=None, init_cuda=False, temp=1):
+        self.temp = temp
         
         super(Reinforce, self).__init__()
         
@@ -22,13 +23,17 @@ class Reinforce(nn.Module):
             self.net.cuda()
 
     def forward(self, state):
+
+        temp = self.temp.to(state.device)
         
         state = torch.from_numpy(state).float()
         
         if self.init_cuda:
             state = state.cuda()
         
-        action_probs = nn.Softmax(dim=-1)(self.net(state))
+        #action_probs = nn.Softmax(dim=-1)(self.net(state))
+        action_probs = F.softmax(self.action_layer(state) / temp)
+
         action_distribution = Categorical(action_probs)
         action = action_distribution.sample()
         
@@ -93,7 +98,7 @@ class ActorCritic(nn.Module):
         state = F.relu(self.affine(state))
         
         state_value = self.value_layer(state)
-        
+
         action_probs = F.softmax(self.action_layer(state) / temp)
 
         action_distribution = Categorical(action_probs)
